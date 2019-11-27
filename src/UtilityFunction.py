@@ -102,5 +102,3 @@ def positveandnegativewordsanalytics(data): # this data should be the data after
 
     return total_dictionary_positive, total_dictionary_negative
 
-
-

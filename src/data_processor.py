@@ -14,14 +14,12 @@ class InputExample(object):
   
     Args:
       text_a: 2-D list. Untokenized sentences of sequence a.
-      text_b: 2-D list. Untokenized sentences of sequence b.
       labels: 2-D list. One-hot labels correspond to
               each sentence in context.
     """
 
-    def __init__(self, text_a, text_b, labels=None):
+    def __init__(self, text_a, labels=None):
         self.text_a = text_a
-        self.text_b = text_b
         self.labels = labels
 
 
@@ -51,14 +49,14 @@ class DataReader(object):
     def _read_tsv(cls, input_file, quotechar=None):
         """Reads a tab separated value file."""
         with open(input_file, "r", encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+            reader = csv.reader(f, delimiter=",", quotechar=quotechar)
             lines = []
             for line in reader:
                 lines.append(line)
             return lines
 
 
-class MRPCReader(DataReader):
+class BDReader(DataReader):
     def __init__(self, batch_size=BATCH_SIZE):
         super().__init__()
         self.batch_size = batch_size
@@ -84,7 +82,6 @@ class MRPCReader(DataReader):
         total_examples = len(lines)
 
         text_a = []
-        text_b = []
         labels = []
         print("\rProcessed Examples: {}/{}".format(0,
                                                    total_examples),
@@ -96,7 +93,6 @@ class MRPCReader(DataReader):
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
             text_a.append(convert_to_unicode(line[3]))
-            text_b.append(convert_to_unicode(line[4]))
             if set_type == "test":
                 label = '0'
             else:
@@ -105,13 +101,13 @@ class MRPCReader(DataReader):
 
             if i % self.batch_size == 0:
                 examples.append(
-                    InputExample(text_a=text_a, text_b=text_b, labels=labels))
+                    InputExample(text_a=text_a, labels=labels))
                 text_a = []
                 text_b = []
                 labels = []
         if len(text_a):
             examples.append(
-                InputExample(text_a=text_a, text_b=text_b, labels=labels))
+                InputExample(text_a=text_a, labels=labels))
         print("\rProcessed Examples: {}/{}".format(total_examples,
                                                    total_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
