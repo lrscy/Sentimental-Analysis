@@ -1,5 +1,5 @@
 import argparse
-from settings import *
+from src.settings import *
 
 parser = argparse.ArgumentParser(description='Hyperparameters')
 ### MODIFY START HERE ###

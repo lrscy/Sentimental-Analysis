@@ -3,13 +3,13 @@ import ast
 import sys
 import copy
 import pprint
-import settings
+import src.settings as settings
 import torch.nn.functional as F
-from settings import *
-from utils import *
+from src.settings import *
+from src.utils import *
 from parser import *
-from models import *
-from data_processor import *
+from src.models import *
+from src.data_processor import *
 from torch import optim
 from pytorch_pretrained_bert.modeling import BertModel
 from pytorch_pretrained_bert.tokenization import BertTokenizer

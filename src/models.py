@@ -2,9 +2,9 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import settings
-from settings import *
-from utils import *
+import src.settings as settings
+from src.settings import *
+from src.utils import *
 
 
 class BertBase(nn.Module):

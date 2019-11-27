@@ -4,9 +4,9 @@ import csv
 import math
 import torch
 import numpy as np
-import settings
-from utils import *
-from settings import *
+import src.settings as settings
+from src.utils import *
+from src.settings import *
 
 
 class InputExample(object):
