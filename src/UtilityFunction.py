@@ -102,5 +102,28 @@ def positveandnegativewordsanalytics(data): # this data should be the data after
 
     return total_dictionary_positive, total_dictionary_negative
 
+def getnounwordsdictionary(data):
+    # get the noun words dictionary list, the list contains the noun word and the index of it in its sentence.
+    print('Get the dictionary of noun words.')
+    noun_dictionary_list = []
+    for i in range(len(data)):
+        if i % (int(len(data) / 10)) == 0:
+            print("-", end='')
+        if i == len(data) - 1:
+            print('-')
+        temp_dic_total = []
+        temp = data.loc[i, 'text']
+        temp_sens = nltk.sent_tokenize(temp)
+        temp_word = [nltk.word_tokenize(sentence) for sentence in temp_sens]
+        for sens in temp_word:
+            temp_dic = {}
+            temp_posttag = nltk.pos_tag(sens)
+            for j in range(len(temp_posttag)):
+                if temp_posttag[j][1] == 'NN':
+                    temp_dic[temp_posttag[j][0]] = j
+            temp_dic_total.append(temp_dic)
+        noun_dictionary_list.append(temp_dic_total)
+    print('Done.')
+    return noun_dictionary_list
 
 
