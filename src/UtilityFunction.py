@@ -43,6 +43,8 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     data.reset_index(inplace=True)
     print("Done.")
 
+    data.drop(['level_0', 'index'], axis=1)
+
     return data
 
 
