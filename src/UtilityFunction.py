@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
+import nltk
+import string
+from nltk.corpus import stopwords
+from src.positiveandnegativewordsdictionary import positive_words, negative_words
 
-def RemoveBrandsandTexts(data): #this data should be original data.
+def RemoveBrandsandTexts(data): # this data should be original data.
     # we need to lower all the text to analytics
     print("Lower all of the text for convenience of analytics.")
     text_columns = data['text'].to_list()
@@ -42,7 +46,59 @@ def RemoveBrandsandTexts(data): #this data should be original data.
     return data
 
 
+def positveandnegativewordsanalytics(data): # this data should be the data after remove brands and texts.
+    # we need to get the dictionary of every text.
+    print("Get the dictionary of every text.")
+    text_columns = data['text'].to_list()
+    text_every_dictionary = []  # get an dictionary from every text and put into the list
+    for i in range(len(text_columns)):
+        if i % (int(len(data) / 10)) == 0:
+            print("-", end='')
+        if i == len(data) - 1:
+            print('-')
+        temp_sens = nltk.sent_tokenize(text_columns[i])
+        temp_word = [nltk.word_tokenize(sentence) for sentence in temp_sens]
+        temp_dict = {}
+        for ele in temp_word:
+            for e in ele:
+                # the word should not be some symbols like ',' '.'
+                temp_symbol = string.punctuation + '\''
+                if e not in temp_symbol:
+                    # we need to delete the stop words in our dictionary to make it cleaner.
+                    temp_stopwords_english = set(stopwords.words('english'))
+                    if e not in temp_stopwords_english:
+                        if e not in temp_dict:
+                            temp_dict[e] = 1
+                        else:
+                            temp_dict[e] += 2
+        text_every_dictionary.append(temp_dict)
+    print("Done.")
 
+    # we need to get the dictionary of all texts whose stopwords were deleted
+    print("Get the dictionary of all text.")
+    total_dictionary = {}
+    for e in text_every_dictionary:
+        for ele in e:
+            if ele not in total_dictionary:
+                total_dictionary[ele] = e[ele]
+            else:
+                total_dictionary[ele] += e[ele]
+    print("Done.")
+
+    # we need to get the positive and negative words in the total dictionary according to the
+    # positive and negative words dictionary got from the github:
+    # https://github.com/shekhargulati/sentiment-analysis-python/tree/master/opinion-lexicon-English
+    print("Get the positive and negative words from the total dictionary seperately.")
+    total_dictionary_positive = {}
+    total_dictionary_negative = {}
+    for e in total_dictionary:
+        if e in positive_words:
+            total_dictionary_positive[e] = total_dictionary[e]
+        elif e in negative_words:
+            total_dictionary_negative[e] = total_dictionary[e]
+    print("Done.")
+
+    return total_dictionary_positive, total_dictionary_negative
 
 
 
