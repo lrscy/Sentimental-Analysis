@@ -1,5 +1,6 @@
 *.swp
 nohup.out
-data/bert-embedding/bert*
+data/
 results/
 */__pycache__/
+.idea/
