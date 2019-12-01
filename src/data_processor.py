@@ -18,9 +18,8 @@ class InputExample(object):
               each sentence in context.
     """
 
-    def __init__(self, text_a, labels=None):
+    def __init__(self, text_a):
         self.text_a = text_a
-        self.labels = labels
 
 
 class DataReader(object):
@@ -83,7 +82,6 @@ class BDReader(DataReader):
         total_examples = len(lines)
 
         text_a = []
-        labels = []
         print("\rProcessed Examples: {}/{}".format(0,
                                                    total_examples),
               end='\r', file=settings.SHELL_OUT_FILE, flush=True)
@@ -94,20 +92,13 @@ class BDReader(DataReader):
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
             text_a.append(convert_to_unicode(line[5]))
-            if set_type == "test":
-                label = '0'
-            else:
-                label = convert_to_unicode(line[0])
-            labels.append(label)
 
             if i % self.batch_size == 0:
                 examples.append(
-                    InputExample(text_a=text_a, labels=labels))
+                    InputExample(text_a=text_a))
                 text_a = []
-                labels = []
         if len(text_a):
-            examples.append(
-                InputExample(text_a=text_a, labels=labels))
+            examples.append(InputExample(text_a=text_a))
         print("\rProcessed Examples: {}/{}".format(total_examples, total_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
         return examples
@@ -124,21 +115,17 @@ class BDProcessor(object):
         inputs_ids = np.zeros((length, self.max_seq_len), dtype=np.int64)
         token_type_ids = np.zeros_like(inputs_ids)
 
-        for i, (text_a, text_b) in enumerate(zip(examples.text_a,
-                                                 examples.text_b)):
-            tokens = []
-            segment_ids = []
-            tokens_a = self.tokenizer.tokenize(text_a)
-            truncate_seq_pair(tokens_a, self.max_seq_len - 2)
+        for i, text_a in enumerate(examples.text_a):
             # inputs
-            tokens.extend(['[CLS]'] + tokens_a + ['[SEP]'])
-            segment_ids.extend([0] * (len(tokens_a) + 2))
-            # pad
-            pad_len = self.max_seq_len - len(tokens)
-            tokens.extend(['[PAD]'] * pad_len)
-            segment_ids.extend([0] * pad_len)
+            tokens = self.tokenizer.tokenize(text_a)[:self.max_seq_len - 2]
+            segment_ids = self.tokenizer.create_token_type_ids_from_sequences(tokens)
             # convert to ids
             tokens = self.tokenizer.convert_tokens_to_ids(tokens)
+            tokens = self.tokenizer.build_inputs_with_special_tokens(tokens)
+            # pad
+            pad_len = self.max_seq_len - len(tokens)
+            tokens.extend([0] * pad_len)
+            segment_ids.extend([0] * pad_len)
             # to numpy
             inputs_ids[i, :] = tokens[:]
             token_type_ids[i, :] = segment_ids[:]
@@ -153,8 +140,3 @@ class BDProcessor(object):
 
         return inputs
 
-    def convert_labels_to_tensor(self, labels, labels_dict):
-        labels = np.array([labels_dict[t] for t in labels])
-        labels = torch.from_numpy(labels).long()
-        labels = labels.cuda() if settings.USE_CUDA else labesls
-        return labels.detach()

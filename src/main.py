@@ -7,7 +7,7 @@ import src.settings as settings
 import torch.nn.functional as F
 from .settings import *
 from .utils import *
-from .parser import *
+from .parser import args
 from .data_processor import *
 from transformers import BertModel, BertTokenizer, AdamW
 # from pytorch_pretrained_bert.modeling import BertModel
@@ -89,19 +89,6 @@ def run(args):
         args.bert_dir + args.bert_file + '-vocab.txt')
     processor = BDProcessor(tokenizer, args.max_seq_length)
     reader = BDReader(args.batch_size)
-
-    model = BertModel.from_pretrained(
-        args.bert_dir + args.bert_file + '.tar.gz', output_attentions=True)
-    if args.multi_gpu:
-        model = nn.DataParallel(model)
-    model = model.cuda() if settings.USE_CUDA else model
-    model.eval()
-
-    examples = reader.get_test_examples(args.data_dir)  # Change method name
-    with torch.no_grad():
-        for example in examples:
-            inputs = processor.convert_examples_to_tensor(example)
-            attentions = model(*inputs)[-1]
 
     """
     # Init

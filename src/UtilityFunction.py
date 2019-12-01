@@ -4,6 +4,7 @@ import nltk
 import string
 from nltk.corpus import stopwords
 from src.positiveandnegativewordsdictionary import positive_words, negative_words
+from transformers import BertTokenizer
 
 def RemoveBrandsandTexts(data): # this data should be original data.
     # we need to lower all the text to analytics
@@ -102,10 +103,20 @@ def positveandnegativewordsanalytics(data): # this data should be the data after
 
     return total_dictionary_positive, total_dictionary_negative
 
-def getnounwordsdictionary(data):
+
+def getnounwordsdictionary(data, args):
     # get the noun words dictionary list, the list contains the noun word and the index of it in its sentence.
     print('Get the dictionary of noun words.')
     noun_dictionary_list = []
+    # use bert tokenizer
+    tokenizer = BertTokenizer.from_pretrained(
+        args.bert_dir + args.bert_file + '-vocab.txt')
+
+    def tokenize(sentence):
+        sentence = tokenizer.tokenize(sentence)
+        tokenized_sent = tokenizer.convert_tokens_to_string(sentence)
+        return tokenized_sent
+
     for i in range(len(data)):
         if i % (int(len(data) / 10)) == 0:
             print("-", end='')
@@ -114,7 +125,7 @@ def getnounwordsdictionary(data):
         temp_dic_total = []
         temp = data.loc[i, 'text']
         temp_sens = nltk.sent_tokenize(temp)
-        temp_word = [nltk.word_tokenize(sentence) for sentence in temp_sens]
+        temp_word = [tokenize(sentence) for sentence in temp_sens]
         for sens in temp_word:
             temp_dic = {}
             temp_posttag = nltk.pos_tag(sens)
@@ -125,5 +136,4 @@ def getnounwordsdictionary(data):
         noun_dictionary_list.append(temp_dic_total)
     print('Done.')
     return noun_dictionary_list
-
 
