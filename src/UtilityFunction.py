@@ -49,7 +49,7 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     return data
 
 
-def positveandnegativewordsanalytics(data): # this data should be the data after remove brands and texts.
+def PositveAndNegativeWordsAnalytics(data): # this data should be the data after remove brands and texts.
     # we need to get the dictionary of every text.
     print("Get the dictionary of every text.")
     text_columns = data['text'].to_list()
@@ -104,7 +104,7 @@ def positveandnegativewordsanalytics(data): # this data should be the data after
     return total_dictionary_positive, total_dictionary_negative
 
 
-def getnounwordsdictionary(data, args):
+def GetNounWordsDictionary(data, args):
     # get the noun words dictionary list, the list contains the noun word and the index of it in its sentence.
     print('Get the dictionary of noun words.')
     noun_dictionary_list = []
@@ -135,5 +135,6 @@ def getnounwordsdictionary(data, args):
             temp_dic_total.append(temp_dic)
         noun_dictionary_list.append(temp_dic_total)
     print('Done.')
+
     return noun_dictionary_list
 
