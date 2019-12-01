@@ -5,15 +5,14 @@ import copy
 import pprint
 import src.settings as settings
 import torch.nn.functional as F
-from src.settings import *
-from src.utils import *
-from parser import *
-from src.models import *
-from src.data_processor import *
-from torch import optim
-from pytorch_pretrained_bert.modeling import BertModel
-from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.optimization import BertAdam
+from .settings import *
+from .utils import *
+from .parser import *
+from .data_processor import *
+from transformers import BertModel, BertTokenizer, AdamW
+# from pytorch_pretrained_bert.modeling import BertModel
+# from pytorch_pretrained_bert.tokenization import BertTokenizer
+# from pytorch_pretrained_bert.optimization import BertAdam
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -22,22 +21,12 @@ def make_model(args):
 
     print('Making model...', file=settings.SHELL_OUT_FILE, flush=True)
 
-    ### MODIFY START HERE ###
-    c = copy.deepcopy
     bert_model = BertModel.from_pretrained(
-        args.bert_dir + args.bert_file + '.tar.gz')
-    model = BertBase(bert_model, 2)
-    model.init_parameters()
-
-    optimizer = BertAdam(model.parameters(),
-                         warmup=args.warmup_propotion,
-                         lr=args.lr, weight_decay=args.l2)
-    criterion = nn.CrossEntropyLoss()
-    ### END HERE ###
+        args.bert_dir + args.bert_file + '.tar.gz', output_attentions=True)
 
     print('Done\n', file=settings.SHELL_OUT_FILE, flush=True)
 
-    return model, optimizer, criterion
+    return bert_model
 
 
 def save_best_model(model, prefix, name, total_step):
@@ -48,22 +37,22 @@ def save_best_model(model, prefix, name, total_step):
 
 
 def evaluate(criterion, output, label, outputs, labels):
-    '''
-  Compute loss and record results here.
-  Designed for dev set and test set.
+    """
+    Compute loss and record results here.
+    Designed for dev set and test set.
 
-  Args:
-    criterion: Loss function of your model.
-    output: output by your model.
-    label: golden label of your output data respectively.
-    outputs: a list of outputs saving all outputs.
-    labels: a list of golden labels of outputs respectively.
+    Args:
+      criterion: Loss function of your model.
+      output: output by your model.
+      label: golden label of your output data respectively.
+      outputs: a list of outputs saving all outputs.
+      labels: a list of golden labels of outputs respectively.
 
-  Return:
-    loss: total loss of the output.
-    outputs: a extended list with same type of content.
-    labels: a extended list with same type of content.
-  '''
+    Return:
+      loss: total loss of the output.
+      outputs: a extended list with same type of content.
+      labels: a extended list with same type of content.
+    """
 
     with torch.no_grad():
         ### MODIFY START HERE ###
@@ -95,26 +84,26 @@ def run(args):
         settings.SHELL_OUT_FILE = sys.stdout
 
     # Build model and data reader/processor
-    ### MODIFY START HERE ###
     ''' Shift to your own tokenizer, processor, and reader '''
     tokenizer = BertTokenizer.from_pretrained(
         args.bert_dir + args.bert_file + '-vocab.txt')
-    processor = MRPCProcessor(tokenizer, args.max_seq_length)
-    reader = MRPCReader(args.batch_size)
-    ### END HERE ###
+    processor = BDProcessor(tokenizer, args.max_seq_length)
+    reader = BDReader(args.batch_size)
 
-    # Load/Write labels
-    label_path = os.path.join(args.output_dir + 'labels.txt')
-    print('Loading labels', file=settings.SHELL_OUT_FILE, flush=True)
-    if os.path.exists(label_path):
-        with open(label_path, 'r', encoding='utf-8') as f:
-            contents = f.read()
-        labels_dict = ast.literal_eval(contents)
-    else:
-        labels_dict = reader.get_labels()
-        with open(label_path, 'w', encoding='utf-8') as f:
-            pprint.pprint(labels_dict, stream=f)
+    model = BertModel.from_pretrained(
+        args.bert_dir + args.bert_file + '.tar.gz', output_attentions=True)
+    if args.multi_gpu:
+        model = nn.DataParallel(model)
+    model = model.cuda() if settings.USE_CUDA else model
+    model.eval()
 
+    examples = reader.get_test_examples(args.data_dir)  # Change method name
+    with torch.no_grad():
+        for example in examples:
+            inputs = processor.convert_examples_to_tensor(example)
+            attentions = model(*inputs)[-1]
+
+    """
     # Init
     ### MODIFY START HERE ###
     ''' Shift to your own metrics '''
@@ -336,7 +325,7 @@ def run(args):
                       file=settings.SHELL_OUT_FILE, flush=True)
                 ### END HERE ###
                 print(file=settings.SHELL_OUT_FILE, flush=True)
-
+    """
 
 if __name__ == '__main__':
     run(args)

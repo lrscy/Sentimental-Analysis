@@ -5,8 +5,8 @@ import math
 import torch
 import numpy as np
 import src.settings as settings
-from src.utils import *
-from src.settings import *
+from .utils import *
+from .settings import *
 
 
 class InputExample(object):
@@ -50,6 +50,7 @@ class DataReader(object):
         """Reads a tab separated value file."""
         with open(input_file, "r", encoding='utf-8') as f:
             reader = csv.reader(f, delimiter=",", quotechar=quotechar)
+            next(reader)
             lines = []
             for line in reader:
                 lines.append(line)
@@ -92,7 +93,7 @@ class BDReader(DataReader):
             if i % 1000 == 0:
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
-            text_a.append(convert_to_unicode(line[3]))
+            text_a.append(convert_to_unicode(line[5]))
             if set_type == "test":
                 label = '0'
             else:
@@ -103,18 +104,16 @@ class BDReader(DataReader):
                 examples.append(
                     InputExample(text_a=text_a, labels=labels))
                 text_a = []
-                text_b = []
                 labels = []
         if len(text_a):
             examples.append(
                 InputExample(text_a=text_a, labels=labels))
-        print("\rProcessed Examples: {}/{}".format(total_examples,
-                                                   total_examples),
+        print("\rProcessed Examples: {}/{}".format(total_examples, total_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
         return examples
 
 
-class MRPCProcessor(object):
+class BDProcessor(object):
     def __init__(self, tokenizer, max_seq_len=MAX_SEQ_LEN):
         self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
@@ -130,13 +129,10 @@ class MRPCProcessor(object):
             tokens = []
             segment_ids = []
             tokens_a = self.tokenizer.tokenize(text_a)
-            tokens_b = self.tokenizer.tokenize(text_b)
-            truncate_seq_pair(tokens_a, tokens_b, self.max_seq_len - 3)
+            truncate_seq_pair(tokens_a, self.max_seq_len - 2)
             # inputs
             tokens.extend(['[CLS]'] + tokens_a + ['[SEP]'])
             segment_ids.extend([0] * (len(tokens_a) + 2))
-            tokens.extend(tokens_b + ['[SEP]'])
-            segment_ids.extend([1] * (len(tokens_b) + 1))
             # pad
             pad_len = self.max_seq_len - len(tokens)
             tokens.extend(['[PAD]'] * pad_len)
@@ -150,7 +146,7 @@ class MRPCProcessor(object):
         inputs_ids = torch.from_numpy(inputs_ids).long().detach()
         token_type_ids = torch.from_numpy(token_type_ids).long().detach()
         inputs_mask = (inputs_ids != 0).long().detach()
-        inputs = [inputs_ids, token_type_ids, inputs_mask]
+        inputs = [inputs_ids, inputs_mask, token_type_ids]
 
         if settings.USE_CUDA:
             inputs = [i.cuda() for i in inputs]
