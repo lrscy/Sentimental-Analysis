@@ -5,8 +5,9 @@ import math
 import torch
 import numpy as np
 import src.settings as settings
-from .utils import *
-from .settings import *
+import pandas
+from src.utils import *
+from src.settings import *
 
 
 class InputExample(object):
@@ -45,15 +46,17 @@ class DataReader(object):
         raise NotImplementedError()
 
     @classmethod
-    def _read_tsv(cls, input_file, quotechar=None):
+    def _read_csv(cls, input_file, quotechar=None):
         """Reads a tab separated value file."""
-        with open(input_file, "r", encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter=",", quotechar=quotechar)
-            next(reader)
-            lines = []
-            for line in reader:
-                lines.append(line)
-            return lines
+        data = pandas.read_csv(input_file)
+        return data['text'].to_list()
+#        with open(input_file, "r", encoding='utf-8') as f:
+#            reader = csv.reader(f, delimiter=",", quotechar=quotechar)
+#            next(reader)
+#            lines = []
+#            for line in reader:
+#                lines.append(line)
+#            return lines
 
 
 class BDReader(DataReader):
@@ -63,15 +66,15 @@ class BDReader(DataReader):
 
     def get_train_examples(self, data_dir):
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, 'train.tsv')), 'train')
+            self._read_csv(os.path.join(data_dir, 'train.csv')), 'train')
 
     def get_dev_examples(self, data_dir):
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, 'dev.tsv')), 'dev')
+            self._read_csv(os.path.join(data_dir, 'dev.csv')), 'dev')
 
     def get_test_examples(self, data_dir):
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, 'test.tsv')), 'test')
+            self._read_csv(os.path.join(data_dir, 'test.csv')), 'test')
 
     def get_labels(self):
         return {'0': 0, '1': 1}
@@ -91,7 +94,7 @@ class BDReader(DataReader):
             if i % 1000 == 0:
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
-            text_a.append(convert_to_unicode(line[5]))
+            text_a.append(convert_to_unicode(str(line)))
 
             if i % self.batch_size == 0:
                 examples.append(

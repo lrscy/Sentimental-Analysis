@@ -109,23 +109,18 @@ def getnounwordsdictionary(data, args):
     print('Get the dictionary of noun words.')
     noun_dictionary_list = []
     # use bert tokenizer
-    tokenizer = BertTokenizer.from_pretrained(
+    bert_tokenizer = BertTokenizer.from_pretrained(
         args.bert_dir + args.bert_file + '-vocab.txt')
 
-    def tokenize(sentence):
-        sentence = tokenizer.tokenize(sentence)
-        tokenized_sent = tokenizer.convert_tokens_to_string(sentence)
-        return tokenized_sent
-
     for i in range(len(data)):
-        if i % (int(len(data) / 10)) == 0:
-            print("-", end='')
-        if i == len(data) - 1:
-            print('-')
+        # if i % (int(len(data) / 10)) == 0:
+        #     print("-", end='')
+        # if i == len(data) - 1:
+        #     print('-')
         temp_dic_total = []
-        temp = data.loc[i, 'text']
+        temp = data[i]
         temp_sens = nltk.sent_tokenize(temp)
-        temp_word = [tokenize(sentence) for sentence in temp_sens]
+        temp_word = [bert_tokenizer.tokenize(sentence) for sentence in temp_sens]
         for sens in temp_word:
             temp_dic = {}
             temp_posttag = nltk.pos_tag(sens)
@@ -137,3 +132,7 @@ def getnounwordsdictionary(data, args):
     print('Done.')
     return noun_dictionary_list
 
+if __name__ == "__main__":
+    data = pd.read_csv("../data/black_decker/total_data.csv")
+    data = RemoveBrandsandTexts(data)
+    data.to_csv("../data/black_decker/test.csv", index=False)
