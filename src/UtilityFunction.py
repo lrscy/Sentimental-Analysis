@@ -49,7 +49,7 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     return data
 
 
-def positveandnegativewordsanalytics(data): # this data should be the data after remove brands and texts.
+def PositveAndNegativeWordsAnalytics(data): # this data should be the data after remove brands and texts.
     # we need to get the dictionary of every text.
     print("Get the dictionary of every text.")
     text_columns = data['text'].to_list()
@@ -104,7 +104,7 @@ def positveandnegativewordsanalytics(data): # this data should be the data after
     return total_dictionary_positive, total_dictionary_negative
 
 
-def getnounwordsdictionary(data, args):
+def GetNounWordsDictionary(data, args):
     # get the noun words dictionary list, the list contains the noun word and the index of it in its sentence.
     print('Get the dictionary of noun words.')
     noun_dictionary_list = []
@@ -112,25 +112,31 @@ def getnounwordsdictionary(data, args):
     bert_tokenizer = BertTokenizer.from_pretrained(
         args.bert_dir + args.bert_file + '-vocab.txt')
 
+    data_text = data['text'].to_list()
     for i in range(len(data)):
         # if i % (int(len(data) / 10)) == 0:
         #     print("-", end='')
         # if i == len(data) - 1:
         #     print('-')
+        record_length_start = 0
         temp_dic_total = []
-        temp = data[i]
+        temp = data_text[i]
         temp_sens = nltk.sent_tokenize(temp)
         temp_word = [bert_tokenizer.tokenize(sentence) for sentence in temp_sens]
-        for sens in temp_word:
+
+        for k in range(len(temp_word)):
             temp_dic = {}
-            temp_posttag = nltk.pos_tag(sens)
+            temp_posttag = nltk.pos_tag(temp_word[k])
             for j in range(len(temp_posttag)):
                 if temp_posttag[j][1] == 'NN':
-                    temp_dic[temp_posttag[j][0]] = j
+                    temp_dic[temp_posttag[j][0]] = j + record_length_start
             temp_dic_total.append(temp_dic)
+            record_length_start += len(temp_word[k])
+
         noun_dictionary_list.append(temp_dic_total)
     print('Done.')
     return noun_dictionary_list
+
 
 if __name__ == "__main__":
     data = pd.read_csv("../data/black_decker/total_data.csv")
