@@ -6,7 +6,8 @@ from nltk.corpus import stopwords
 from src.positiveandnegativewordsdictionary import positive_words, negative_words
 from transformers import BertTokenizer
 
-def RemoveBrandsandTexts(data): # this data should be original data.
+
+def RemoveBrandsandTexts(data):  # this data should be original data.
     # we need to lower all the text to analytics
     print("Lower all of the text for convenience of analytics.")
     text_columns = data['text'].to_list()
@@ -15,6 +16,8 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     text_columns_df = pd.DataFrame(text_columns, columns=['text'])
     data['text'] = text_columns_df['text']
     print("Done.")
+
+    bert_tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
 
     # we need to remove some brands that contain a little information.
     print("Remove the brands that contain a little information.")
@@ -25,10 +28,11 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     record_idx = []
     for i in range(len(data)):
         if i % (int(len(data) / 10)) == 0:
-            print("-", end='')
+            print("-", end='', flush=True)
         if i == len(data) - 1:
-            print('-')
-        if data.loc[i, 'brand'] not in brand_keys_countbiggerthan10000:
+            print('-', flush=True)
+        if data.loc[i, 'brand'] not in brand_keys_countbiggerthan10000 \
+                or len(bert_tokenizer.tokenize(str(data.loc[i, 'text']))) > 510:
             record_idx.append(i)
     data.drop(record_idx, inplace=True)
     data.reset_index(inplace=True)
@@ -49,7 +53,7 @@ def RemoveBrandsandTexts(data): # this data should be original data.
     return data
 
 
-def PositveAndNegativeWordsAnalytics(data): # this data should be the data after remove brands and texts.
+def PositveAndNegativeWordsAnalytics(data):  # this data should be the data after remove brands and texts.
     # we need to get the dictionary of every text.
     print("Get the dictionary of every text.")
     text_columns = data['text'].to_list()
@@ -106,7 +110,7 @@ def PositveAndNegativeWordsAnalytics(data): # this data should be the data after
 
 def GetNounWordsDictionary(data, args):
     # get the noun words dictionary list, the list contains the noun word and the index of it in its sentence.
-#    print('Get the dictionary of noun words.')
+    #    print('Get the dictionary of noun words.')
     noun_dictionary_list = []
     # use bert tokenizer
     bert_tokenizer = BertTokenizer.from_pretrained(
@@ -117,12 +121,15 @@ def GetNounWordsDictionary(data, args):
         converted_tokens = []
         for token in tokens:
             if token[:2] == "##":
-                converted_tokens[-1] += token[2:]
+                if len(converted_tokens) == 0:
+                    converted_tokens.append(token)
+                else:
+                    converted_tokens[-1] += token[2:]
             else:
                 converted_tokens.append(token)
         return converted_tokens
 
-#    data_text = data['text'].to_list()
+    #    data_text = data['text'].to_list()
     for i in range(len(data)):
         # if i % (int(len(data) / 10)) == 0:
         #     print("-", end='')
@@ -131,7 +138,7 @@ def GetNounWordsDictionary(data, args):
         record_length_start = 0
         temp_dic_total = []
         temp = data[i]
-#        temp = data_text[i]
+        #        temp = data_text[i]
         temp_sens = nltk.sent_tokenize(temp)
         temp_word = [tokenize(sentence) for sentence in temp_sens]
 
@@ -145,7 +152,7 @@ def GetNounWordsDictionary(data, args):
             record_length_start += len(temp_word[k])
 
         noun_dictionary_list.append(temp_dic_total)
-#    print('Done.')
+    #    print('Done.')
     return noun_dictionary_list
 
 

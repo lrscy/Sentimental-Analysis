@@ -33,7 +33,7 @@ class DataReader(object):
         raise NotImplementedError()
 
     @classmethod
-    def _read_csv(cls, input_file, quotechar=None):
+    def _read_csv(cls, input_file):
         """Reads a tab separated value file."""
         data = pandas.read_csv(input_file)
         return data['text'].to_list()
@@ -76,7 +76,7 @@ class BDReader(DataReader):
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
             text_a.append(convert_to_unicode(str(line)))
 
-            if i % self.batch_size == 0:
+            if (i + 1) % self.batch_size == 0:
                 examples.append(text_a)
                 text_a = []
         if len(text_a):
