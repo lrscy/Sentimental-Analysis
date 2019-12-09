@@ -52,7 +52,7 @@ def relation_extractor(args):
     st_example = 0
     ed_example = 1000
     while st_example < len(examples):
-        print("No. of processed examples:", st_example * args.batch_size, end='\r', flush=True)
+        print("No. of processed examples: " + str(st_example * args.batch_size), end='\r', flush=True)
         total_attentions = []
         total_ids = []
         with torch.no_grad():

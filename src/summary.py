@@ -1,14 +1,19 @@
 from src.relation_extractor import relation_extractor
 from src.parser import args
 import pandas as pd
+import pprint
+import os
 
 
 def summary(args):
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    fr = open(args.output_dir + "relationships.txt", "w+")
     data = pd.read_csv(args.data_dir + "test.csv")
-    examples = data["text"].to_list()
     stars = data["stars"].to_list()
     results = relation_extractor(args)
     print(len(results))
+    pprint.pprint(results, fr)
 
     tp = fp = fn = tn = 0
     for result, star in zip(results, stars):
@@ -60,7 +65,7 @@ if __name__ == "__main__":
     args.batch_size = b
     args.max_seq_length = s
     args.dropout = dp
-    args.output_dir = "../results/re_output_lr" + str(lr) + "_ep" + str(ep) + "_dp" + str(dp) + "_b " + str(b) + "_s" \
+    args.output_dir = "../results/re_output_lr" + str(lr) + "_ep" + str(ep) + "_dp" + str(dp) + "_b" + str(b) + "_s" \
                       + str(s) + "_wp" + str(wp) + "_run" + str(run) + "/"
     args.shell_print = True
     args.suffix = "last"
