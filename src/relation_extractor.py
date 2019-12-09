@@ -66,7 +66,7 @@ def relation_extractor(args):
 
         for example, attentions, token_ids in zip(examples[st_example:ed_example], total_attentions, total_ids):
             noun_dict = GetNounWordsDictionary(example, args)
-            for bid in range(args.batch_size):
+            for bid in range(len(example)):
                 pad_pos = 0
                 while pad_pos < token_ids.shape[1] and token_ids[bid, pad_pos] != 0:
                     pad_pos += 1

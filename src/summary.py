@@ -14,6 +14,8 @@ def summary(args):
     results = relation_extractor(args)
     print(len(results))
     pprint.pprint(results, fr)
+    with open(args.output_dir + "backup.txt", "w+") as f:
+        f.write(results)
 
     tp = fp = fn = tn = 0
     for result, star in zip(results, stars):
