@@ -10,19 +10,6 @@ from src.utils import *
 from src.settings import *
 
 
-class InputExample(object):
-    """Constructs an InputExample
-  
-    Args:
-      text_a: 2-D list. Untokenized sentences of sequence a.
-      labels: 2-D list. One-hot labels correspond to
-              each sentence in context.
-    """
-
-    def __init__(self, text_a):
-        self.text_a = text_a
-
-
 class DataReader(object):
     """
     Base class for data converters for sequence classification
@@ -50,13 +37,6 @@ class DataReader(object):
         """Reads a tab separated value file."""
         data = pandas.read_csv(input_file)
         return data['text'].to_list()
-#        with open(input_file, "r", encoding='utf-8') as f:
-#            reader = csv.reader(f, delimiter=",", quotechar=quotechar)
-#            next(reader)
-#            lines = []
-#            for line in reader:
-#                lines.append(line)
-#            return lines
 
 
 class BDReader(DataReader):
@@ -89,19 +69,18 @@ class BDReader(DataReader):
                                                    total_examples),
               end='\r', file=settings.SHELL_OUT_FILE, flush=True)
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
+            # if i == 0:
+            #     continue
             if i % 1000 == 0:
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
             text_a.append(convert_to_unicode(str(line)))
 
             if i % self.batch_size == 0:
-                examples.append(
-                    InputExample(text_a=text_a))
+                examples.append(text_a)
                 text_a = []
         if len(text_a):
-            examples.append(InputExample(text_a=text_a))
+            examples.append(text_a)
         print("\rProcessed Examples: {}/{}".format(total_examples, total_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
         return examples
@@ -114,11 +93,11 @@ class BDProcessor(object):
 
     def convert_examples_to_tensor(self, examples):
         # init
-        length = len(examples.text_a)
+        length = len(examples)
         inputs_ids = np.zeros((length, self.max_seq_len), dtype=np.int64)
         token_type_ids = np.zeros_like(inputs_ids)
 
-        for i, text_a in enumerate(examples.text_a):
+        for i, text_a in enumerate(examples):
             # inputs
             tokens = self.tokenizer.tokenize(text_a)[:self.max_seq_len - 2]
             segment_ids = self.tokenizer.create_token_type_ids_from_sequences(tokens)
