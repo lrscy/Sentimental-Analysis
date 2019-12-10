@@ -3,19 +3,22 @@ from src.parser import args
 import pandas as pd
 import pprint
 import os
+import ast
 
 
 def summary(args):
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    fr = open(args.output_dir + "relationships.txt", "w+")
     data = pd.read_csv(args.data_dir + "test.csv")
     stars = data["stars"].to_list()
-    results = relation_extractor(args)
-    print(len(results))
-    pprint.pprint(results, fr)
-    with open(args.output_dir + "backup.txt", "w+") as f:
-        f.write(results)
+    if not os.path.exists(args.output_dir + "relationships.txt"):
+        fr = open(args.output_dir + "relationships.txt", "w+")
+        results = relation_extractor(args)
+        print(len(results))
+        pprint.pprint(results, fr)
+    else:
+        with open(args.output_dir + "relationships.txt", "r") as f:
+            results = ast.literal_eval(f.read())
 
     tp = fp = fn = tn = 0
     for result, star in zip(results, stars):
