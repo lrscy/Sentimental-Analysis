@@ -57,7 +57,7 @@ class BDReader(DataReader):
 
     def get_train_examples(self, data_dir):
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, 'train.tsv')), 'train')
+            self._read_csv(os.path.join(data_dir, 'test.tsv')), 'train')
 
     def get_dev_examples(self, data_dir):
         return self._create_examples(
