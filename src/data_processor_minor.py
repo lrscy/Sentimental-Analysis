@@ -1,24 +1,10 @@
 import os
 import torch
 import numpy as np
-import pandas as pd
 import src.settings as settings
+import pandas
 from src.utils import *
 from src.settings import *
-
-
-class InputExample(object):
-    """Constructs an InputExample
-
-    Args:
-      text_a: 2-D list. Untokenized sentences of sequence a.
-      labels: 2-D list. One-hot labels correspond to
-              each sentence in context.
-    """
-
-    def __init__(self, text_a, labels=None):
-        self.text_a = text_a
-        self.labels = labels
 
 
 class DataReader(object):
@@ -46,8 +32,8 @@ class DataReader(object):
     @classmethod
     def _read_csv(cls, input_file):
         """Reads a tab separated value file."""
-        data = pd.read_csv(input_file)
-        return list(zip(data['text'].tolist(), data['stars'].tolist()))
+        data = pandas.read_csv(input_file)
+        return data['text'].to_list()
 
 
 class BDReader(DataReader):
@@ -57,15 +43,15 @@ class BDReader(DataReader):
 
     def get_train_examples(self, data_dir):
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, 'train.tsv')), 'train')
+            self._read_csv(os.path.join(data_dir, 'train.csv')), 'train')
 
     def get_dev_examples(self, data_dir):
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, 'dev.tsv')), 'dev')
+            self._read_csv(os.path.join(data_dir, 'dev.csv')), 'dev')
 
     def get_test_examples(self, data_dir):
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, 'test.tsv')), 'test')
+            self._read_csv(os.path.join(data_dir, 'test.csv')), 'test')
 
     def get_labels(self):
         return {'0': 0, '1': 1}
@@ -76,7 +62,6 @@ class BDReader(DataReader):
         total_examples = len(lines)
 
         text_a = []
-        labels = []
         print("\rProcessed Examples: {}/{}".format(0,
                                                    total_examples),
               end='\r', file=settings.SHELL_OUT_FILE, flush=True)
@@ -86,23 +71,14 @@ class BDReader(DataReader):
             if i % 1000 == 0:
                 print("\rProcessed Examples: {}/{}".format(i, total_examples),
                       end='\r', file=settings.SHELL_OUT_FILE, flush=True)
-            text_a.append(convert_to_unicode(line[0]))
-            if set_type == "test":
-                label = '0'
-            else:
-                label = convert_to_unicode(line[-1])
-            labels.append(label)
+            text_a.append(convert_to_unicode(str(line)))
 
             if (i + 1) % self.batch_size == 0:
-                examples.append(
-                    InputExample(text_a=text_a, labels=labels))
+                examples.append(text_a)
                 text_a = []
-                labels = []
         if len(text_a):
-            examples.append(
-                InputExample(text_a=text_a, labels=labels))
-        print("\rProcessed Examples: {}/{}".format(total_examples,
-                                                   total_examples),
+            examples.append(text_a)
+        print("\rProcessed Examples: {}/{}".format(total_examples, total_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
         return examples
 
@@ -114,11 +90,11 @@ class BDProcessor(object):
 
     def convert_examples_to_tensor(self, examples):
         # init
-        length = len(examples.text_a)
+        length = len(examples)
         inputs_ids = np.zeros((length, self.max_seq_len), dtype=np.int64)
         token_type_ids = np.zeros_like(inputs_ids)
 
-        for i, text_a in enumerate(examples.text_a):
+        for i, text_a in enumerate(examples):
             # inputs
             tokens = self.tokenizer.tokenize(text_a)[:self.max_seq_len - 2]
             segment_ids = self.tokenizer.create_token_type_ids_from_sequences(tokens)
@@ -136,15 +112,10 @@ class BDProcessor(object):
         inputs_ids = torch.from_numpy(inputs_ids).long().detach()
         token_type_ids = torch.from_numpy(token_type_ids).long().detach()
         inputs_mask = (inputs_ids != 0).long().detach()
-        inputs = [inputs_ids, token_type_ids, inputs_mask]
+        inputs = [inputs_ids, inputs_mask, token_type_ids]
 
         if settings.USE_CUDA:
             inputs = [i.cuda() for i in inputs]
 
         return inputs
 
-    def convert_labels_to_tensor(self, labels, labels_dict):
-        labels = np.array([labels_dict[t] for t in labels])
-        labels = torch.from_numpy(labels).long()
-        labels = labels.cuda() if settings.USE_CUDA else labels
-        return labels.detach()

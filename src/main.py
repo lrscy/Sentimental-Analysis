@@ -5,10 +5,10 @@ import copy
 import pprint
 import src.settings as settings
 import torch.nn.functional as F
-from .settings import *
-from .utils import *
-from .parser import args
-from .data_processor import *
+from src.settings import *
+from src.utils import *
+from src.parser import args
+from src.data_processor import *
 from transformers import BertModel, BertTokenizer, AdamW
 # from pytorch_pretrained_bert.modeling import BertModel
 # from pytorch_pretrained_bert.tokenization import BertTokenizer

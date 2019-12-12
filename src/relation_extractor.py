@@ -1,6 +1,6 @@
 import src.settings as settings
 from src.parser import args
-from src.data_processor import *
+from src.data_processor_minor import *
 from transformers import BertModel, BertTokenizer
 from src.UtilityFunction import GetNounWordsDictionary
 from src.positiveandnegativewordsdictionary import positive_words, negative_words

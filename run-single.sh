@@ -1,5 +1,6 @@
-DSTC8_HOME=./
-cd ${DSTC8_HOME}
+HOME=./
+# shellcheck disable=SC2164
+cd ${HOME}
 export EMBED_DIR=data/bert-embedding/
 export DATA_DIR=data/MRPC/
 
