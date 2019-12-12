@@ -1,32 +1,25 @@
-import os
 import ast
-import sys
-import copy
 import pprint
-import src.settings as settings
-import torch.nn.functional as F
-from src.settings import *
-from src.utils import *
-from src.parser import args
+from src.parser import *
 from src.data_processor import *
 from transformers import BertModel, BertTokenizer, AdamW
-# from pytorch_pretrained_bert.modeling import BertModel
-# from pytorch_pretrained_bert.tokenization import BertTokenizer
-# from pytorch_pretrained_bert.optimization import BertAdam
 from sklearn.metrics import precision_recall_fscore_support
 
 
 def make_model(args):
-    """ Making models here according to parameters in settings and args """
+    ''' Making models here according to parameters in settings and args '''
 
     print('Making model...', file=settings.SHELL_OUT_FILE, flush=True)
 
     bert_model = BertModel.from_pretrained(
-        args.bert_dir + args.bert_file + '.tar.gz', output_attentions=True)
+        args.bert_dir + args.bert_file + '.tar.gz')
+
+    optimizer = AdamW(bert_model.parameters(), lr=args.lr, weight_decay=args.l2)
+    criterion = nn.CrossEntropyLoss()
 
     print('Done\n', file=settings.SHELL_OUT_FILE, flush=True)
 
-    return bert_model
+    return bert_model, optimizer, criterion
 
 
 def save_best_model(model, prefix, name, total_step):
@@ -55,17 +48,12 @@ def evaluate(criterion, output, label, outputs, labels):
     """
 
     with torch.no_grad():
-        ### MODIFY START HERE ###
         loss = criterion(output, label)
         output = np.argmax(output.cpu().numpy(), axis=-1).tolist()
         label = label.cpu().numpy().astype(np.int).tolist()
-        ### END HERE ###
 
-        ### ONLY IF YOU HAVE MULTI LABELS ###
-        ### MODIFY START HERE ###
         outputs.extend(output)
         labels.extend(label)
-        ### END HERE ###
     return loss.item()
 
 
@@ -78,27 +66,33 @@ def run(args):
 
     # Decide output stream
     if args.shell_print == 'file':
-        settings.SHELL_OUT_FILE = open(args.output_dir + 'shell_out', 'a+',
-                                       encoding='utf-8')
+        settings.SHELL_OUT_FILE = open(args.output_dir + 'shell_out', 'a+', encoding='utf-8')
     else:
         settings.SHELL_OUT_FILE = sys.stdout
 
     # Build model and data reader/processor
-    ''' Shift to your own tokenizer, processor, and reader '''
     tokenizer = BertTokenizer.from_pretrained(
         args.bert_dir + args.bert_file + '-vocab.txt')
     processor = BDProcessor(tokenizer, args.max_seq_length)
     reader = BDReader(args.batch_size)
 
-    """
+    # Load/Write labels
+    label_path = os.path.join(args.output_dir + 'labels.txt')
+    print('Loading labels', file=settings.SHELL_OUT_FILE, flush=True)
+    if os.path.exists(label_path):
+        with open(label_path, 'r', encoding='utf-8') as f:
+            contents = f.read()
+        labels_dict = ast.literal_eval(contents)
+    else:
+        labels_dict = reader.get_labels()
+        with open(label_path, 'w', encoding='utf-8') as f:
+            pprint.pprint(labels_dict, stream=f)
+
     # Init
-    ### MODIFY START HERE ###
-    ''' Shift to your own metrics '''
     best_acc = 0
     best_recall = 0
     best_fval = 0
     best_loss = 1e9
-    ### END HERE ###
 
     if args.do_train:
         # Create model
@@ -116,30 +110,20 @@ def run(args):
 
         train_examples = reader.get_train_examples(args.data_dir)
         total_train_examples = len(train_examples)
+        loss_train = []
         for ep in range(args.epoch):
-            print("######## Training ########",
-                  file=settings.SHELL_OUT_FILE, flush=True)
-            print('Epoch:', ep,
-                  file=settings.SHELL_OUT_FILE, flush=True)
-            loss_train = []
+            print("######## Training ########", file=settings.SHELL_OUT_FILE, flush=True)
+            print('Epoch:', ep, file=settings.SHELL_OUT_FILE, flush=True)
             model.train()
-            print("\rTrain Step: {} Loss: {}".format(step, 0),
-                  file=settings.SHELL_OUT_FILE, flush=True)  # end='\r',
+            print("\rTrain Step: {} Loss: {}".format(step, 0), file=settings.SHELL_OUT_FILE, flush=True)  # end='\r',
 
             for i, example in enumerate(train_examples):
                 step += 1
 
-                ### MODIFY START HERE ###
-                '''
-        Adapt to output that your processor give, send them to models,
-        and calculate loss
-        '''
                 inputs = processor.convert_examples_to_tensor(example)
-                labels = processor.convert_labels_to_tensor(example.labels,
-                                                            labels_dict)
+                labels = processor.convert_labels_to_tensor(example.labels, labels_dict)
                 prediction = model(*inputs)
                 loss = criterion(prediction, labels)
-                ### END HERE ###
 
                 loss_train.append(loss.item())
                 optimizer.zero_grad()
@@ -149,8 +133,7 @@ def run(args):
                     print("\rTrain Step: {} Loss: {}".format(step, loss.item()),
                           file=settings.SHELL_OUT_FILE, flush=True)  # end='\r',
                     if args.do_eval:
-                        print("\n######## Evaluating ########",
-                              file=settings.SHELL_OUT_FILE, flush=True)
+                        print("\n######## Evaluating ########", file=settings.SHELL_OUT_FILE, flush=True)
                         eval_examples = reader.get_dev_examples(args.data_dir)
                         output_eval = []
                         label_eval = []
@@ -162,20 +145,12 @@ def run(args):
                                   end='\r', file=settings.SHELL_OUT_FILE, flush=True)
                             for i, example in enumerate(eval_examples):
                                 if (i + 1) % 100 == 0:
-                                    print("\rEval Step: {}/{}".format(i + 1,
-                                                                      total_eval_examples),
+                                    print("\rEval Step: {}/{}".format(i + 1, total_eval_examples),
                                           end='\r', file=settings.SHELL_OUT_FILE, flush=True)
 
-                                ### MODIFY START HERE ###
-                                '''
-                Adapt to output that your processor give, send them to models,
-                and calculate loss
-                '''
                                 inputs = processor.convert_examples_to_tensor(example)
-                                labels = processor.convert_labels_to_tensor(example.labels,
-                                                                            labels_dict)
+                                labels = processor.convert_labels_to_tensor(example.labels, labels_dict)
                                 prediction = model(*inputs)
-                                ### END HERE ###
 
                                 loss = evaluate(criterion, prediction, labels,
                                                 output_eval, label_eval)
@@ -189,18 +164,11 @@ def run(args):
                             print('Loss:', loss_eval_all,
                                   file=settings.SHELL_OUT_FILE, flush=True)
 
-                            ### MODIFY START HERE ###
-                            ''' Replace by your own evaluation funciton.  '''
                             acc, recall, fval, _ = \
-                                precision_recall_fscore_support(label_eval, output_eval,
-                                                                average='binary')
-                            print("Accuracy:", acc,
-                                  file=settings.SHELL_OUT_FILE, flush=True)
-                            print("Recall:", recall,
-                                  file=settings.SHELL_OUT_FILE, flush=True)
-                            print("F-score", fval,
-                                  file=settings.SHELL_OUT_FILE, flush=True)
-                            ### END HERE ###
+                                precision_recall_fscore_support(label_eval, output_eval, average='binary')
+                            print("Accuracy:", acc, file=settings.SHELL_OUT_FILE, flush=True)
+                            print("Recall:", recall, file=settings.SHELL_OUT_FILE, flush=True)
+                            print("F-score", fval, file=settings.SHELL_OUT_FILE, flush=True)
 
                             save_model = copy.deepcopy(model)
                             save_model = save_model.module.cpu() if args.multi_gpu \
@@ -210,8 +178,6 @@ def run(args):
                             # save last model
                             save_best_model(model, prefix, 'last', step)
 
-                            ### MODIFY START HERE ###
-                            ''' Replace following codes by your own metrics '''
                             # save model with best accuracy on dev set
                             if acc > best_acc:
                                 best_acc = acc
@@ -228,24 +194,16 @@ def run(args):
                             if loss_eval_all < best_loss:
                                 best_loss = loss_eval_all
                                 save_best_model(model, prefix, 'loss', step)
-                            ### END HERE ###
                             print(file=settings.SHELL_OUT_FILE, flush=True)
 
-        print("\rTrain Step: {} Loss: {}".format(step,
-                                                 sum(loss_train) / \
-                                                 len(train_examples)),
+        print("\rTrain Step: {} Loss: {}".format(step, sum(loss_train) / total_train_examples),
               file=settings.SHELL_OUT_FILE, flush=True)
 
     if args.do_predict:
-        print("######### Testing ########",
-              file=settings.SHELL_OUT_FILE, flush=True)
+        print("######### Testing ########", file=settings.SHELL_OUT_FILE, flush=True)
         test_examples = reader.get_test_examples(args.data_dir)
 
-        ### MODIFY START HERE ###
-        ''' Replace by your own metrics '''
         for suffix in ['last', 'acc', 'recall', 'fval', 'loss']:
-            ### END HERE ###
-
             # Create model
             model, optimizer, criterion = make_model(args)
             # Load model if it exists
@@ -271,48 +229,28 @@ def run(args):
                         print("\rTest Step: {}/{}".format(i + 1, total_test_examples),
                               end='\r', file=settings.SHELL_OUT_FILE, flush=True)
 
-                    ### MODIFY START HERE ###
-                    '''
-          Adapt to output that your processor give, send them to models,
-          and calculate loss
-          '''
                     inputs = processor.convert_examples_to_tensor(example)
-                    labels = processor.convert_labels_to_tensor(example.labels,
-                                                                labels_dict)
+                    labels = processor.convert_labels_to_tensor(example.labels, labels_dict)
                     predictions = model(*inputs)
-                    ### END HERE ###
 
                     loss = evaluate(criterion, predictions, labels,
                                     output_test, label_test)
                     loss_test += loss
 
-                print("\n#### " + suffix.upper() + " ####",
-                      file=settings.SHELL_OUT_FILE, flush=True)
+                print("\n#### " + suffix.upper() + " ####", file=settings.SHELL_OUT_FILE, flush=True)
                 loss_test /= total_test_examples
                 print("Loss:", loss_test, file=settings.SHELL_OUT_FILE, flush=True)
 
                 output_file_name = args.output_dir + 'result_' + suffix
                 with open(output_file_name, 'w', encoding='utf-8') as f:
-
-                    ### MODIFY START HERE ###
-                    ''' Replace by your own output format code. '''
                     pprint.pprint(output_test, f)
-                    ### END HERE ###
 
-                ### MODIFY START HERE ###
-                ''' Replace by your own evaluation funciton.  '''
-                acc, recall, fval, _ = \
-                    precision_recall_fscore_support(label_test, output_test,
-                                                    average='binary')
-                print("Accuracy:", acc,
-                      file=settings.SHELL_OUT_FILE, flush=True)
-                print("Recall:", recall,
-                      file=settings.SHELL_OUT_FILE, flush=True)
-                print("F-score", fval,
-                      file=settings.SHELL_OUT_FILE, flush=True)
-                ### END HERE ###
+                acc, recall, fval, _ = precision_recall_fscore_support(label_test, output_test, average='binary')
+                print("Accuracy:", acc, file=settings.SHELL_OUT_FILE, flush=True)
+                print("Recall:", recall, file=settings.SHELL_OUT_FILE, flush=True)
+                print("F-score", fval, file=settings.SHELL_OUT_FILE, flush=True)
                 print(file=settings.SHELL_OUT_FILE, flush=True)
-    """
+
 
 if __name__ == '__main__':
     run(args)
