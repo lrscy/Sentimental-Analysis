@@ -15,6 +15,7 @@ analyzing fine-grained sentiment for each text sequence.
 
 Run "summary.py" to predict results and get brief summary. If there is no "relations.txt"
 file in specific output folder, it will call "relation_extractor.py" to predict results.
+Functions of other files are listed below.
 
 ## Project Structure
 
